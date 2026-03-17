@@ -12,64 +12,44 @@
     fetch('/api/kho')
     .then(res => res.json())
     .then(duLieuKho => {
-      let html = "";
-      duLieuKho.forEach((item) => {
-        // Khớp tên cột với SQL: ton_hien_tai, ten_nguyen_lieu, don_vi_tinh
-        let ton = parseFloat(item.ton_hien_tai);
-        let mucBaoDong = 10; // Giả sử mức báo động là 10
-        
-        let statusClass = ton >= mucBaoDong ? "safe" : "warning";
-        let statusText = ton >= mucBaoDong ? "An toàn" : "Cần nhập gấp";
+        let html = "";
+        duLieuKho.forEach((item) => {
+            let statusClass = item.ton >= item.min ? "safe" : "warning";
+            let statusText = item.ton >= item.min ? "An toàn" : "Cần nhập gấp";
 
-        html += `<tr>
-                  <td><b>${item.nguyen_lieu_id}</b></td>
-                  <td>${item.ten_nguyen_lieu}</td>
-                  <td><b style="color:${ton < mucBaoDong ? "red" : "black"}">${ton} ${item.don_vi_tinh}</b></td>
-                  <td>${mucBaoDong}</td>
-                  <td><span class="status ${statusClass}">${statusText}</span></td>
-                  ${user.quyen === "admin" ? `<td><button class="btn-delete-row" onclick="xoaDong('${item.nguyen_lieu_id}')">Xóa</button></td>` : ""}
-              </tr>`;
-      });
-      document.getElementById("ds-kho").innerHTML =
-        html || '<tr><td colspan="6" style="text-align:center">Kho trống</td></tr>';
+            html += `<tr>
+                <td><b>${item.ma}</b></td>
+                <td>${item.ten}</td>
+                <td><b style="color:${item.ton < item.min ? "red" : "black"}">${item.ton}</b></td>
+                <td>${item.min}</td>
+                <td><span class="status ${statusClass}">${statusText}</span></td>
+                ${user.quyen === "admin" ? `<td><button class="btn-delete-row" onclick="xoaDong('${item.ma}')">Xóa</button></td>` : ""}
+            </tr>`;
+        });
+        document.getElementById("ds-kho").innerHTML = html || '<tr><td colspan="6" style="text-align:center">Kho trống</td></tr>';
     });
-  }
+}
 
-  function themHang() {
-    // Lưu ý: Hệ thống mới dùng id_nl (ID nguyên liệu)
-    let id_nl = document.getElementById("ma").value; // Nhập ID nguyên liệu
-    let sl = parseFloat(document.getElementById("ton").value); // Nhập số lượng nhập
+function themHang() {
+    let ma = document.getElementById("ma").value;
+    let ten = document.getElementById("ten").value;
+    let ton = document.getElementById("ton").value;
+    let min = document.getElementById("min").value;
 
-    if (!id_nl || isNaN(sl))
-      return alert("Vui lòng nhập ID nguyên liệu và số lượng!");
+    if (!ma || !ten) return alert("Vui lòng nhập mã và tên hàng!");
 
-    fetch('/api/kho/nhap', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ id_nl: id_nl, sl: sl })
+    fetch('/api/kho/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ma, ten, ton, min })
     })
     .then(res => res.json())
-    .then(result => {
-      if(result.success) {
-        hienThiKho();
-        document.getElementById("ma").value = "";
-        document.getElementById("ton").value = "";
-        alert("Nhập kho thành công!");
-      } else {
-        alert("Lỗi: " + result.error);
-      }
+    .then(res => {
+        if(res.success) {
+            hienThiKho();
+            alert("Đã thêm vào kho thành công!");
+        } else {
+            alert("Lỗi: " + res.error);
+        }
     });
-  }
-
-  function dangXuat() {
-    localStorage.removeItem("nguoiDungHienTai");
-    window.location.href = "login.html";
-  }
-
-  function toggleSidebar() {
-    let sb = document.getElementById("sidebar");
-    sb.style.left = sb.style.left === "0px" ? "-280px" : "0px";
-  }
-
-  hienThiKho();
-</script>
+}
