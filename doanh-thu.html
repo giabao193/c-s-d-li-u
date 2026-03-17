@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Doanh thu - coffee Samba</title>
+    <style>
+      body { font-family: Arial; margin: 0; background-color: #000; display: flex; background-image: url("hinhnen.jpg"); background-size: cover; background-attachment: fixed; }
+      .menu-btn { font-size: 14px; background: #537667; color: #fff; padding: 12px 24px; position: fixed; top: 20px; left: 20px; z-index: 1000; cursor: pointer; }
+      #main-content { padding: 80px 50px; width: 100%; }
+      .content-overlay { background: rgba(255,255,255,0.9); padding: 40px; border-radius: 10px; max-width: 800px; margin: auto; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+      th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+      th { background: #000; color: #fff; }
+    </style>
+  </head>
+  <body>
+    <button class="menu-btn" onclick="window.location.href='index.html'">🏠 Trang chủ</button>
+
+    <div id="main-content">
+      <div class="content-overlay">
+        <h1>Báo cáo doanh thu</h1>
+        <p>Thống kê doanh thu theo ngày của <b>coffee Samba</b>.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Ngày</th>
+              <th>Doanh thu (VNĐ)</th>
+            </tr>
+          </thead>
+          <tbody id="ds-dt"></tbody>
+        </table>
+        <h3 style="text-align: right; margin-top: 20px;">TỔNG CỘNG: <span id="tong-cong" style="color: red;">0</span>đ</h3>
+      </div>
+    </div>
+
+    <script>
+      function taiDoanhThu() {
+        fetch('/api/doanh-thu')
+        .then(res => res.json())
+        .then(data => {
+          let html = "";
+          let tong = 0;
+          data.forEach(item => {
+            html += `<tr>
+              <td>${item.ngay}</td>
+              <td><b>${item.tien.toLocaleString()}đ</b></td>
+            </tr>`;
+            tong += item.tien;
+          });
+          document.getElementById("ds-dt").innerHTML = html;
+          document.getElementById("tong-cong").innerText = tong.toLocaleString();
+        });
+      }
+      taiDoanhThu();
+    </script>
+  </body>
+</html>

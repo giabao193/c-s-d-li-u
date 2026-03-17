@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Đăng nhập - coffee Samba</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .login-box {
+        background: white;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        width: 300px;
+        text-align: center;
+      }
+      h2 {
+        font-family: "Times New Roman", serif;
+        color: #c2061cf4;
+        text-transform: uppercase;
+        margin-top: 0;
+      }
+      input {
+        width: 90%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        background-color: #000;
+        color: white;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+        text-transform: uppercase;
+        margin-top: 10px;
+      }
+      button:hover {
+        background-color: #c2061cf4;
+      }
+      .toggle-text {
+        margin-top: 15px;
+        font-size: 13px;
+        color: #555;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-box" id="form-dang-nhap">
+      <h2>ĐĂNG NHẬP HỆ THỐNG</h2>
+      <input type="text" id="dn-tai-khoan" placeholder="Tên đăng nhập" />
+      <input type="password" id="dn-mat-khau" placeholder="Mật khẩu" />
+      <button onclick="dangNhap()">Đăng nhập</button>
+      <div class="toggle-text" onclick="chuyenForm('dang-ky')">
+        Chưa có tài khoản? Đăng ký ngay
+      </div>
+    </div>
+
+    <div class="login-box" id="form-dang-ky" style="display: none">
+      <h2>ĐĂNG KÝ NHÂN VIÊN</h2>
+      <input type="text" id="dk-tai-khoan" placeholder="Tên đăng nhập mới" />
+      <input type="password" id="dk-mat-khau" placeholder="Mật khẩu" />
+      <button onclick="dangKy()">Đăng ký chờ duyệt</button>
+      <div class="toggle-text" onclick="chuyenForm('dang-nhap')">
+        Quay lại Đăng nhập
+      </div>
+    </div>
+
+    <script>
+      // Khởi tạo Admin mặc định nếu hệ thống chưa có ai
+      let danhSachTK = JSON.parse(localStorage.getItem("taiKhoanSamba")) || [];
+      if (danhSachTK.length === 0) {
+        danhSachTK.push({
+          tk: "admin",
+          mk: "123456",
+          quyen: "admin",
+          trangThai: "da_duyet",
+        });
+        localStorage.setItem("taiKhoanSamba", JSON.stringify(danhSachTK));
+      }
+
+      function chuyenForm(loai) {
+        document.getElementById("form-dang-nhap").style.display =
+          loai === "dang-nhap" ? "block" : "none";
+        document.getElementById("form-dang-ky").style.display =
+          loai === "dang-ky" ? "block" : "none";
+      }
+
+      function dangKy() {
+        let tk = document.getElementById("dk-tai-khoan").value;
+        let mk = document.getElementById("dk-mat-khau").value;
+
+        if (!tk || !mk) return alert("Vui lòng nhập đủ thông tin!");
+
+        fetch('/api/register', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({tk, mk})
+        })
+        .then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            alert("Đăng ký thành công! Vui lòng chờ Admin phê duyệt.");
+            chuyenForm('dang-nhap');
+          } else {
+            alert("Lỗi: " + data.message);
+          }
+        });
+      }
+
+      function dangNhap() {
+        let tk = document.getElementById("dn-tai-khoan").value;
+        let mk = document.getElementById("dn-mat-khau").value;
+
+        fetch('/api/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({tk, mk})
+        })
+        .then(res => {
+          if (!res.ok) return res.json().then(d => { throw new Error(d.message) });
+          return res.json();
+        })
+        .then(data => {
+          localStorage.setItem("nguoiDungHienTai", JSON.stringify(data.user));
+          window.location.href = "index.html";
+        })
+        .catch(err => alert(err.message));
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quản lý Khách hàng - coffee Samba</title>
+    <style>
+      body { font-family: Arial; margin: 0; background-color: #000; display: flex; background-image: url("hinhnen.jpg"); background-size: cover; background-attachment: fixed; }
+      .menu-btn { font-size: 14px; background: #537667; color: #fff; padding: 12px 24px; position: fixed; top: 20px; left: 20px; z-index: 1000; cursor: pointer; }
+      #user-info { position: fixed; top: 20px; right: 20px; background: rgba(255,255,255,0.9); padding: 10px 20px; border-radius: 5px; z-index: 1000; font-weight: bold; }
+      #main-content { padding: 80px 50px; width: 100%; }
+      .content-overlay { background: rgba(255,255,255,0.9); padding: 40px; border-radius: 10px; max-width: 1000px; margin: auto; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+      th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+      th { background: #000; color: #fff; }
+      .btn-add { background: #537667; color: white; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; }
+      input { padding: 8px; margin: 5px; }
+    </style>
+  </head>
+  <body>
+    <script>
+      let user = JSON.parse(localStorage.getItem("nguoiDungHienTai"));
+      if (!user) window.location.href = "login.html";
+    </script>
+    <div id="user-info">Xin chào, <span style="color: #c2061cf4" id="username"></span>!</div>
+    <button class="menu-btn" onclick="window.location.href='index.html'">🏠 Trang chủ</button>
+
+    <div id="main-content">
+      <div class="content-overlay">
+        <h1>Quản lý khách hàng</h1>
+        <div border="1px dashed #537667" style="padding: 20px; margin-bottom: 20px;">
+          <h3>THÊM KHÁCH HÀNG MỚI</h3>
+          <input type="text" id="hoten" placeholder="Họ tên" />
+          <input type="text" id="sdt" placeholder="Số điện thoại" />
+          <input type="email" id="email" placeholder="Email" />
+          <button class="btn-add" onclick="themKhachHang()">+ Thêm</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Họ tên</th>
+              <th>Số điện thoại</th>
+              <th>Email</th>
+              <th>Ngày tạo</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="ds-kh"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById("username").innerText = user.tk;
+
+      function taiKH() {
+        fetch('/api/khach-hang')
+        .then(res => res.json())
+        .then(data => {
+          let html = "";
+          data.forEach(kh => {
+            html += `<tr>
+              <td>${kh.id}</td>
+              <td><b>${kh.ho_ten}</b></td>
+              <td>${kh.so_dt}</td>
+              <td>${kh.email}</td>
+              <td>${kh.Ngay_rao}</td>
+              <td><button onclick="xoaKH(${kh.id})" style="color:red; cursor:pointer">Xóa</button></td>
+            </tr>`;
+          });
+          document.getElementById("ds-kh").innerHTML = html;
+        });
+      }
+
+      function themKhachHang() {
+        let hoten = document.getElementById("hoten").value;
+        let sdt = document.getElementById("sdt").value;
+        let email = document.getElementById("email").value;
+        if(!hoten || !sdt) return alert("Nhập đủ tên và số ĐT!");
+
+        fetch('/api/khach-hang/add', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ hoten, sdt, email })
+        }).then(() => {
+          taiKH();
+          document.getElementById("hoten").value = "";
+          document.getElementById("sdt").value = "";
+        });
+      }
+
+      function xoaKH(id) {
+        if(confirm("Xóa khách hàng này?")) {
+          fetch('/api/khach-hang/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id })
+          }).then(() => taiKH());
+        }
+      }
+      taiKH();
+    </script>
+  </body>
+</html>

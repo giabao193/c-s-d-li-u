@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quản lý Sản phẩm - coffee Samba</title>
+    <style>
+      body { font-family: Arial; margin: 0; background-color: #000; display: flex; background-image: url("hinhnen.jpg"); background-size: cover; background-attachment: fixed; }
+      .menu-btn { font-size: 14px; background: #537667; color: #fff; padding: 12px 24px; position: fixed; top: 20px; left: 20px; z-index: 1000; cursor: pointer; }
+      #user-info { position: fixed; top: 20px; right: 20px; background: rgba(255,255,255,0.9); padding: 10px 20px; border-radius: 5px; z-index: 1000; font-weight: bold; }
+      #main-content { padding: 80px 50px; width: 100%; }
+      .content-overlay { background: rgba(255,255,255,0.9); padding: 40px; border-radius: 10px; max-width: 1000px; margin: auto; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+      th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+      th { background: #000; color: #fff; }
+      .btn-add { background: #537667; color: white; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; }
+      input { padding: 8px; margin: 5px; }
+    </style>
+  </head>
+  <body>
+    <script>
+      let user = JSON.parse(localStorage.getItem("nguoiDungHienTai"));
+      if (!user) window.location.href = "login.html";
+    </script>
+    <div id="user-info">Xin chào, <span style="color: #c2061cf4" id="username"></span>!</div>
+    <button class="menu-btn" onclick="window.location.href='index.html'">🏠 Trang chủ</button>
+
+    <div id="main-content">
+      <div class="content-overlay">
+        <h1>Quản lý sản phẩm</h1>
+        <div id="vung-admin" style="display:none; border: 1px dashed #537667; padding: 20px; margin-bottom: 20px;">
+          <h3>THÊM SẢN PHẨM MỚI</h3>
+          <input type="text" id="ten" placeholder="Tên sản phẩm" />
+          <input type="text" id="loai" placeholder="Loại cafe" />
+          <input type="number" id="gia" placeholder="Giá bán" />
+          <input type="text" id="donvi" placeholder="Đơn vị (ly/kg)" value="ly" />
+          <button class="btn-add" onclick="themSanPham()">+ Thêm</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tên sản phẩm</th>
+              <th>Loại</th>
+              <th>Giá</th>
+              <th>Đơn vị</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="ds-sp"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById("username").innerText = user.tk;
+      if(user.quyen === "admin") document.getElementById("vung-admin").style.display = "block";
+
+      function taiSP() {
+        fetch('/api/san-pham')
+        .then(res => res.json())
+        .then(data => {
+          let html = "";
+          data.forEach(sp => {
+            html += `<tr>
+              <td>${sp.id}</td>
+              <td><b>${sp.ten_san_pham}</b></td>
+              <td>${sp.loại_cf}</td>
+              <td>${parseFloat(sp.gia_ban).toLocaleString()}đ</td>
+              <td>${sp.don_vi}</td>
+              <td>${sp.trang_thai}</td>
+              <td><button onclick="xoaSP(${sp.id})" style="color:red; cursor:pointer">Xóa</button></td>
+            </tr>`;
+          });
+          document.getElementById("ds-sp").innerHTML = html;
+        });
+      }
+
+      function themSanPham() {
+        let ten = document.getElementById("ten").value;
+        let loai = document.getElementById("loai").value;
+        let gia = document.getElementById("gia").value;
+        let donvi = document.getElementById("donvi").value;
+        if(!ten || !gia) return alert("Nhập đủ tên và giá!");
+
+        fetch('/api/san-pham/add', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ten, loai, gia, donvi })
+        }).then(() => {
+          taiSP();
+          document.getElementById("ten").value = "";
+          document.getElementById("gia").value = "";
+        });
+      }
+
+      function xoaSP(id) {
+        if(confirm("Xóa sản phẩm này?")) {
+          fetch('/api/san-pham/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id })
+          }).then(() => taiSP());
+        }
+      }
+      taiSP();
+    </script>
+  </body>
+</html>

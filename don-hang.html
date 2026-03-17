@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quản lý Đơn hàng - coffee Samba</title>
+    <style>
+      body { font-family: Arial; margin: 0; background-color: #000; display: flex; background-image: url("hinhnen.jpg"); background-size: cover; background-attachment: fixed; }
+      .menu-btn { font-size: 14px; background: #537667; color: #fff; padding: 12px 24px; position: fixed; top: 20px; left: 20px; z-index: 1000; cursor: pointer; }
+      #main-content { padding: 80px 50px; width: 100%; }
+      .content-overlay { background: rgba(255,255,255,0.9); padding: 40px; border-radius: 10px; max-width: 1000px; margin: auto; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+      th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+      th { background: #000; color: #fff; }
+      .btn-add { background: #537667; color: white; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; }
+      input, select { padding: 8px; margin: 5px; width: 200px; }
+    </style>
+  </head>
+  <body>
+    <button class="menu-btn" onclick="window.location.href='index.html'">🏠 Trang chủ</button>
+
+    <div id="main-content">
+      <div class="content-overlay">
+        <h1>Quản lý Đơn hàng</h1>
+        
+        <div style="background: #f4f4f4; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+          <h3>TẠO ĐƠN HÀNG MỚI</h3>
+          <select id="select-khachhang">
+            <option value="">-- Chọn khách hàng --</option>
+          </select>
+          <input type="number" id="tongtien" placeholder="Tổng tiền (VNĐ)" />
+          <button class="btn-add" onclick="themDonHang()">+ Tạo đơn</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Mã ĐH</th>
+              <th>Khách hàng</th>
+              <th>Ngày mua</th>
+              <th>Tổng tiền</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody id="ds-donhang"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      // 1. Tải danh sách khách hàng vào dropdown
+      function taiKhachHang() {
+        fetch('/api/khach-hang')
+        .then(res => res.json())
+        .then(data => {
+          let html = '<option value="">-- Chọn khách hàng --</option>';
+          data.forEach(kh => {
+            html += `<option value="${kh.id}">${kh.ho_ten} (${kh.so_dt})</option>`;
+          });
+          document.getElementById("select-khachhang").innerHTML = html;
+        });
+      }
+
+      // 2. Tải danh sách đơn hàng
+      function taiDonHang() {
+        fetch('/api/don-hang')
+        .then(res => res.json())
+        .then(data => {
+          let html = "";
+          data.forEach(d => {
+            html += `<tr>
+              <td>#${d.id}</td>
+              <td><b>${d.khach_hang}</b></td>
+              <td>${d.ngay}</td>
+              <td style="color: green; font-weight: bold;">${d.tong_tien.toLocaleString()}đ</td>
+              <td><span style="background: #d4edda; padding: 3px 8px; border-radius: 3px;">${d.trang_thai}</span></td>
+            </tr>`;
+          });
+          document.getElementById("ds-donhang").innerHTML = html;
+        });
+      }
+
+      // 3. Thêm đơn hàng mới
+      function themDonHang() {
+        let id_khach = document.getElementById("select-khachhang").value;
+        let tong_tien = document.getElementById("tongtien").value;
+
+        if(!id_khach || !tong_tien) return alert("Vui lòng chọn khách và nhập số tiền!");
+
+        fetch('/api/don-hang/add', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id_khach, tong_tien })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            alert("Tạo đơn hàng thành công!");
+            taiDonHang();
+            document.getElementById("tongtien").value = "";
+          } else {
+            alert("Lỗi: " + data.error);
+          }
+        });
+      }
+
+      // Khởi chạy
+      taiKhachHang();
+      taiDonHang();
+    </script>
+  </body>
+</html>
