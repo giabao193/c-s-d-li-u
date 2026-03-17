@@ -1,15 +1,17 @@
+import os
 import mysql.connector
 
 def import_sql():
-    # Cấu hình kết nối (HÃY ĐẢM BẢO USER/PASSWORD ĐÚNG)
+    # Railway sẽ tự động điền các thông số này thông qua tab Variables
     db_config = {
-        "host": "localhost",
-        "user": "root",
-        "password": ""
+        "host": os.getenv("MYSQLHOST", "localhost"),
+        "user": os.getenv("MYSQLUSER", "root"),
+        "password": os.getenv("MYSQLPASSWORD", ""),
+        "port": int(os.getenv("MYSQLPORT", 3306))
     }
 
     try:
-        print("Đang kết nối tới MySQL...")
+        print(f"Đang kết nối tới MySQL tại {db_config['host']}...")
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
@@ -36,7 +38,3 @@ def import_sql():
 
     except Exception as e:
         print(f"LỖI: {e}")
-        print("Hãy đảm bảo bạn đã bật XAMPP (MySQL) trước khi chạy!")
-
-if __name__ == "__main__":
-    import_sql()
