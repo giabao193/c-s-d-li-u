@@ -109,6 +109,18 @@ def add_kh():
     except Exception as e: return jsonify({"success": False, "message": str(e)}), 400
     finally: conn.close()
 
+@app.route('/api/khach-hang/delete', methods=['POST'])
+def delete_kh():
+    d = request.json
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM khach_hang WHERE id = %s", (d['id'],))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e: return jsonify({"success": False, "message": str(e)}), 400
+    finally: conn.close()
+
 # --- API SẢN PHẨM (Đã sửa loại_cf -> loai_cf) ---
 @app.route('/api/san-pham')
 def get_sp():
