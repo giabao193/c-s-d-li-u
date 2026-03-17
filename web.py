@@ -137,6 +137,60 @@ def get_don_hang():
 def h(): return send_from_directory('.', 'index.html')
 @app.route('/<path:p>')
 def s(p): return send_from_directory('.', p)
+# --- API KHO HÀNG ---
+@app.route('/api/kho')
+def get_kho():
+    conn = get_db_connection()
+    if not conn: return jsonify([]), 500
+    try:
+        cursor = conn.cursor(dictionary=True)
+        # Lấy dữ liệu từ View ton_kho chúng ta đã tạo trong SQL
+        cursor.execute("SELECT * FROM ton_kho")
+        return jsonify(cursor.fetchall())
+    finally: conn.close()
+
+@app.route('/api/kho/nhap', methods=['POST'])
+def nhap_kho():
+    d = request.json
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO kho_nguyen_lieu (id_nguyen_lieu, loai_giao_dich, so_luong) 
+            VALUES (%s, 'nhap', %s)
+        """, (d['id_nl'], d['sl']))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
+    finally: conn.close()
+
+# --- API DOANH THU ---
+@app.route('/api/doanh-thu')
+def get_doanh_thu():
+    conn = get_db_connection()
+    if not conn: return jsonify({"tong": 0}), 500
+    try:
+        cursor = conn.cursor(dictionary=True)
+        # Tính tổng tiền của các đơn hàng đã hoàn thành
+        cursor.execute("SELECT SUM(tong_tien) as tong FROM don_hang WHERE trang_thai = 'hoan_thanh'")
+        res = cursor.fetchone()
+        return jsonify({"tong": float(res['tong']) if res['tong'] else 0})
+    finally: conn.close()
+
+@app.route('/api/doanh-thu/bieu-do')
+def get_bieu_do():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        # Thống kê doanh thu theo ngày
+        cursor.execute("""
+            SELECT DATE_FORMAT(ngay_mua, '%d/%m') as ngay, SUM(tong_tien) as doanh_thu 
+            FROM don_hang 
+            WHERE trang_thai = 'hoan_thanh'
+            GROUP BY ngay ORDER BY ngay ASC LIMIT 7
+        """)
+        return jsonify(cursor.fetchall())
+    finally: conn.close()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
