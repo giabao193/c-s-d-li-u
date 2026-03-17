@@ -1,55 +1,125 @@
-<script>
-  // 1. Khởi tạo dữ liệu và quyền
-  document.querySelector("#user-info span span").innerText = user.tk;
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý Kho - coffee Samba</title>
+    <style>
+        body { font-family: Arial; margin: 0; background-color: #000; display: flex; background-image: url("hinhnen.jpg"); background-size: cover; background-attachment: fixed; }
+        .menu-btn { font-size: 14px; background: #537667; color: #fff; padding: 12px 24px; position: fixed; top: 20px; left: 20px; z-index: 1000; cursor: pointer; border: none; }
+        #main-content { padding: 80px 50px; width: 100%; }
+        .content-overlay { background: rgba(255,255,255,0.9); padding: 40px; border-radius: 10px; max-width: 1000px; margin: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #537667; color: white; }
+        .status { padding: 4px 8px; border-radius: 3px; font-weight: bold; font-size: 12px; }
+        .safe { background: #d4edda; color: #155724; }
+        .warning { background: #f8d7da; color: #721c24; }
+        .btn-add { background: #537667; color: white; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; }
+        input { padding: 8px; margin: 5px; width: 150px; border: 1px solid #ccc; border-radius: 4px; }
+        #vung-admin { background: #f9f9f9; padding: 20px; border-radius: 5px; margin-bottom: 20px; border: 1px dashed #537667; display: none; }
+    </style>
+</head>
+<body>
+    <button class="menu-btn" onclick="window.location.href='index.html'">🏠 Trang chủ</button>
 
-  // 2. Kiểm tra quyền Admin
-  if (user.quyen === "admin") {
-    document.getElementById("vung-admin").style.display = "block";
-    document.getElementById("cot-hanh-dong").style.display = "table-cell";
-  }
+    <div id="main-content">
+        <div class="content-overlay">
+            <h1>Quản lý Kho Nguyên Liệu</h1>
 
-  function hienThiKho() {
-    fetch('/api/kho')
-    .then(res => res.json())
-    .then(duLieuKho => {
-        let html = "";
-        duLieuKho.forEach((item) => {
-            let statusClass = item.ton >= item.min ? "safe" : "warning";
-            let statusText = item.ton >= item.min ? "An toàn" : "Cần nhập gấp";
+            <div id="vung-admin">
+                <h3>NHẬP HÀNG MỚI VÀO KHO</h3>
+                <input type="text" id="ma" placeholder="Mã hàng (VD: CF01)">
+                <input type="text" id="ten" placeholder="Tên nguyên liệu">
+                <input type="number" id="ton" placeholder="Số lượng tồn">
+                <input type="number" id="min" placeholder="Mức báo động">
+                <button class="btn-add" onclick="themHang()">+ Thêm hàng</button>
+            </div>
 
-            html += `<tr>
-                <td><b>${item.ma}</b></td>
-                <td>${item.ten}</td>
-                <td><b style="color:${item.ton < item.min ? "red" : "black"}">${item.ton}</b></td>
-                <td>${item.min}</td>
-                <td><span class="status ${statusClass}">${statusText}</span></td>
-                ${user.quyen === "admin" ? `<td><button class="btn-delete-row" onclick="xoaDong('${item.ma}')">Xóa</button></td>` : ""}
-            </tr>`;
-        });
-        document.getElementById("ds-kho").innerHTML = html || '<tr><td colspan="6" style="text-align:center">Kho trống</td></tr>';
-    });
-}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mã</th>
+                        <th>Tên nguyên liệu</th>
+                        <th>Tồn hiện tại</th>
+                        <th>Mức tối thiểu</th>
+                        <th>Trạng thái</th>
+                        <th id="cot-hanh-dong" style="display: none;">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="ds-kho"></tbody>
+            </table>
+        </div>
+    </div>
 
-function themHang() {
-    let ma = document.getElementById("ma").value;
-    let ten = document.getElementById("ten").value;
-    let ton = document.getElementById("ton").value;
-    let min = document.getElementById("min").value;
+    <script>
+        let user = JSON.parse(localStorage.getItem("nguoiDungHienTai"));
+        if (!user) window.location.href = "login.html";
 
-    if (!ma || !ten) return alert("Vui lòng nhập mã và tên hàng!");
-
-    fetch('/api/kho/add', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ ma, ten, ton, min })
-    })
-    .then(res => res.json())
-    .then(res => {
-        if(res.success) {
-            hienThiKho();
-            alert("Đã thêm vào kho thành công!");
-        } else {
-            alert("Lỗi: " + res.error);
+        // Kiểm tra quyền Admin
+        if (user.quyen === "admin") {
+            document.getElementById("vung-admin").style.display = "block";
+            document.getElementById("cot-hanh-dong").style.display = "table-cell";
         }
-    });
-}
+
+        function hienThiKho() {
+            fetch('/api/kho')
+            .then(res => res.json())
+            .then(duLieuKho => {
+                let html = "";
+                duLieuKho.forEach((item) => {
+                    let statusClass = item.ton >= item.min ? "safe" : "warning";
+                    let statusText = item.ton >= item.min ? "An toàn" : "Cần nhập gấp";
+
+                    html += `<tr>
+                        <td><b>${item.ma}</b></td>
+                        <td>${item.ten}</td>
+                        <td><b style="color:${item.ton < item.min ? "red" : "black"}">${item.ton}</b></td>
+                        <td>${item.min}</td>
+                        <td><span class="status ${statusClass}">${statusText}</span></td>
+                        ${user.quyen === "admin" ? `<td><button style="background:red; color:white; border:none; padding:5px; cursor:pointer;" onclick="xoaDong('${item.ma}')">Xóa</button></td>` : ""}
+                    </tr>`;
+                });
+                document.getElementById("ds-kho").innerHTML = html || '<tr><td colspan="6" style="text-align:center">Kho trống</td></tr>';
+            });
+        }
+
+        function themHang() {
+            let ma = document.getElementById("ma").value;
+            let ten = document.getElementById("ten").value;
+            let ton = document.getElementById("ton").value;
+            let min = document.getElementById("min").value;
+
+            if (!ma || !ten) return alert("Vui lòng nhập mã và tên hàng!");
+
+            fetch('/api/kho/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ ma, ten, ton, min })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.success) {
+                    hienThiKho();
+                    alert("Đã thêm vào kho thành công!");
+                    document.getElementById("ma").value = "";
+                    document.getElementById("ten").value = "";
+                } else {
+                    alert("Lỗi: " + res.error);
+                }
+            });
+        }
+
+        function xoaDong(ma) {
+            if(!confirm("Bạn có chắc muốn xóa mặt hàng này?")) return;
+            fetch('/api/kho/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ ma })
+            })
+            .then(() => hienThiKho());
+        }
+
+        hienThiKho();
+    </script>
+</body>
+</html>

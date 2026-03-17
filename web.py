@@ -120,7 +120,6 @@ def get_don_hang():
     if not conn: return jsonify([]), 500
     try:
         cursor = conn.cursor(dictionary=True)
-        # Sửa lỗi Join bảng viết hoa Khach_hang
         query = """
             SELECT d.id, k.ho_ten as khach_hang, DATE_FORMAT(d.ngay_mua, '%d/%m/%Y %H:%i') as ngay, 
                    d.tong_tien, d.trang_thai 
@@ -132,22 +131,48 @@ def get_don_hang():
         return jsonify(cursor.fetchall())
     finally: conn.close()
 
+@app.route('/api/don-hang/add', methods=['POST'])
+def add_don_hang():
+    d = request.json
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # Mặc định id_cua_hang = 1 (Samba Coffee Central)
+        cursor.execute("""
+            INSERT INTO don_hang (id_khach_hang, id_cua_hang, tong_tien, trang_thai) 
+            VALUES (%s, 1, %s, 'hoan_thanh')
+        """, (d['id_khach'], d['tong_tien']))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e: 
+        return jsonify({"success": False, "message": str(e)}), 400
+    finally: conn.close()
+
 # --- PHỤC VỤ FILE ---
 @app.route('/')
 def h(): return send_from_directory('.', 'index.html')
 @app.route('/<path:p>')
 def s(p): return send_from_directory('.', p)
+
 # --- API DOANH THU ---
 @app.route('/api/doanh-thu')
 def get_doanh_thu():
     conn = get_db_connection()
-    if not conn: return jsonify({"tong": 0}), 500
+    if not conn: return jsonify([]), 500
     try:
         cursor = conn.cursor(dictionary=True)
-        # Tính tổng tiền của các đơn hàng đã hoàn thành
-        cursor.execute("SELECT SUM(tong_tien) as tong FROM don_hang WHERE trang_thai = 'hoan_thanh'")
-        res = cursor.fetchone()
-        return jsonify({"tong": float(res['tong']) if res['tong'] else 0})
+        # Lấy doanh thu theo ngày để hiển thị dạng mảng
+        cursor.execute("""
+            SELECT DATE_FORMAT(ngay_mua, '%d/%m/%Y') as ngay, SUM(tong_tien) as tien 
+            FROM don_hang 
+            WHERE trang_thai = 'hoan_thanh'
+            GROUP BY ngay ORDER BY ngay DESC
+        """)
+        res = cursor.fetchall()
+        # Chuyển đổi Decimal sang float để JSON có thể serialize
+        for r in res:
+            r['tien'] = float(r['tien']) if r['tien'] else 0
+        return jsonify(res)
     finally: conn.close()
 
 @app.route('/api/doanh-thu/bieu-do')
