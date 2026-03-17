@@ -191,34 +191,41 @@ def get_bieu_do():
         """)
         return jsonify(cursor.fetchall())
     finally: conn.close()
-    # --- API KHO HÀNG (Dán thêm vào cuối file, trước dòng if __name__) ---
+   # --- API KHO HÀNG (Sửa lại để lưu trực tiếp) ---
 @app.route('/api/kho')
-def get_kho_new():
+def get_kho():
     conn = get_db_connection()
-    if not conn: return jsonify([]), 500
     try:
         cursor = conn.cursor(dictionary=True)
-        # Gọi View ton_kho để lấy số liệu
-        cursor.execute("SELECT * FROM ton_kho")
+        # Lấy trực tiếp từ bảng nguon_nguyen_lieu
+        cursor.execute("SELECT id, ma_hang as ma, ten_nguyen_lieu as ten, ton_kho as ton, muc_bao_dong as min FROM nguon_nguyen_lieu ORDER BY id DESC")
         return jsonify(cursor.fetchall())
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
     finally: conn.close()
 
-# --- API DOANH THU (Dán thêm) ---
-@app.route('/api/doanh-thu')
-def get_doanh_thu_new():
+@app.route('/api/kho/add', methods=['POST'])
+def add_kho_direct():
+    d = request.json
     conn = get_db_connection()
-    if not conn: return jsonify({"tong": 0}), 500
     try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT SUM(tong_tien) as tong FROM don_hang WHERE trang_thai = 'hoan_thanh'")
-        res = cursor.fetchone()
-        return jsonify({"tong": float(res['tong']) if res['tong'] else 0})
-    except:
-        return jsonify({"tong": 0})
+        cursor = conn.cursor()
+        # Lưu thẳng: mã, tên, tồn, mức báo động
+        cursor.execute("""
+            INSERT INTO nguon_nguyen_lieu (ma_hang, ten_nguyen_lieu, ton_kho, muc_bao_dong) 
+            VALUES (%s, %s, %s, %s)
+        """, (d['ma'], d['ten'], d['ton'], d['min']))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e: 
+        return jsonify({"success": False, "error": str(e)}), 400
     finally: conn.close()
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+@app.route('/api/kho/delete', methods=['POST'])
+def delete_kho_item():
+    d = request.json
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM nguon_nguyen_lieu WHERE ma_hang = %s", (d['ma'],))
+        conn.commit()
+        return jsonify({"success": True})
+    finally: conn.close()
