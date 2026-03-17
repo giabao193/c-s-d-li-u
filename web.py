@@ -118,27 +118,32 @@ def get_kh():
 def add_kh():
     d = request.json
     conn = get_db_connection()
-    if not conn: return jsonify({"success": False}), 500
+    if not conn: return jsonify({"success": False, "message": "Không thể kết nối Database"}), 500
     try:
         cursor = conn.cursor()
         cursor.execute("INSERT INTO Khach_hang (ho_ten, so_dt, email) VALUES (%s, %s, %s)", 
                        (d['hoten'], d['sdt'], d.get('email', '')))
         conn.commit()
         return jsonify({"success": True})
-    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
+    except mysql.connector.Error as err:
+        if err.errno == 1062:
+            return jsonify({"success": False, "message": "Số điện thoại hoặc Email đã tồn tại!"}), 400
+        return jsonify({"success": False, "message": str(err)}), 400
+    except Exception as e: 
+        return jsonify({"success": False, "message": str(e)}), 500
     finally: conn.close()
 
 @app.route('/api/khach-hang/delete', methods=['POST'])
 def delete_kh():
     d = request.json
     conn = get_db_connection()
-    if not conn: return jsonify({"success": False}), 500
+    if not conn: return jsonify({"success": False, "message": "Không thể kết nối Database"}), 500
     try:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM Khach_hang WHERE id = %s", (d['id'],))
         conn.commit()
         return jsonify({"success": True})
-    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e: return jsonify({"success": False, "message": str(e)}), 400
     finally: conn.close()
 
 # --- API SẢN PHẨM ---
@@ -157,27 +162,30 @@ def get_sp():
 def add_sp():
     d = request.json
     conn = get_db_connection()
-    if not conn: return jsonify({"success": False}), 500
+    if not conn: return jsonify({"success": False, "message": "Không thể kết nối Database"}), 500
     try:
         cursor = conn.cursor()
         cursor.execute("INSERT INTO san_pham (ten_san_pham, loại_cf, gia_ban, don_vi) VALUES (%s, %s, %s, %s)", 
                        (d['ten'], d['loai'], d['gia'], d['donvi']))
         conn.commit()
         return jsonify({"success": True})
-    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
+    except mysql.connector.Error as err:
+        return jsonify({"success": False, "message": str(err)}), 400
+    except Exception as e: 
+        return jsonify({"success": False, "message": str(e)}), 500
     finally: conn.close()
 
 @app.route('/api/san-pham/delete', methods=['POST'])
 def delete_sp():
     d = request.json
     conn = get_db_connection()
-    if not conn: return jsonify({"success": False}), 500
+    if not conn: return jsonify({"success": False, "message": "Không thể kết nối Database"}), 500
     try:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM san_pham WHERE id = %s", (d['id'],))
         conn.commit()
         return jsonify({"success": True})
-    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e: return jsonify({"success": False, "message": str(e)}), 400
     finally: conn.close()
 
 # --- API ĐƠN HÀNG ---
@@ -203,7 +211,7 @@ def get_don_hang():
 def add_don_hang():
     d = request.json
     conn = get_db_connection()
-    if not conn: return jsonify({"success": False}), 500
+    if not conn: return jsonify({"success": False, "message": "Không thể kết nối Database"}), 500
     try:
         cursor = conn.cursor()
         cursor.execute("""
@@ -222,8 +230,14 @@ def add_don_hang():
         
         conn.commit()
         return jsonify({"success": True})
-    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
+    except mysql.connector.Error as err:
+        if err.errno == 1452:
+            return jsonify({"success": False, "message": "Lỗi: Không tìm thấy Khách hàng hoặc Cửa hàng (ID: 1)"}), 400
+        return jsonify({"success": False, "message": str(err)}), 400
+    except Exception as e: 
+        return jsonify({"success": False, "message": str(e)}), 500
     finally: conn.close()
+
 
 # --- PHỤC VỤ FILE ---
 @app.route('/')

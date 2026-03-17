@@ -67,11 +67,12 @@
         .then(data => {
           let html = "";
           data.forEach(d => {
+            let tongTien = parseFloat(d.tong_tien) || 0;
             html += `<tr>
               <td>#${d.id}</td>
               <td><b>${d.khach_hang}</b></td>
               <td>${d.ngay}</td>
-              <td style="color: green; font-weight: bold;">${d.tong_tien.toLocaleString()}đ</td>
+              <td style="color: green; font-weight: bold;">${tongTien.toLocaleString()}đ</td>
               <td><span style="background: #d4edda; padding: 3px 8px; border-radius: 3px;">${d.trang_thai}</span></td>
             </tr>`;
           });
@@ -98,7 +99,7 @@
             taiDonHang();
             document.getElementById("tongtien").value = "";
           } else {
-            alert("Lỗi: " + data.error);
+            alert("Lỗi: " + (data.message || data.error));
           }
         });
       }

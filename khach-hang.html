@@ -82,10 +82,18 @@
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ hoten, sdt, email })
-        }).then(() => {
-          taiKH();
-          document.getElementById("hoten").value = "";
-          document.getElementById("sdt").value = "";
+        })
+        .then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            alert("Thêm khách hàng thành công!");
+            taiKH();
+            document.getElementById("hoten").value = "";
+            document.getElementById("sdt").value = "";
+            document.getElementById("email").value = "";
+          } else {
+            alert("Lỗi: " + data.message);
+          }
         });
       }
 

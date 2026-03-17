@@ -87,10 +87,17 @@
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ ten, loai, gia, donvi })
-        }).then(() => {
-          taiSP();
-          document.getElementById("ten").value = "";
-          document.getElementById("gia").value = "";
+        })
+        .then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            alert("Thêm sản phẩm thành công!");
+            taiSP();
+            document.getElementById("ten").value = "";
+            document.getElementById("gia").value = "";
+          } else {
+            alert("Lỗi: " + data.message);
+          }
         });
       }
 
