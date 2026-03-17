@@ -15,12 +15,10 @@ db_config = {
 }
 
 # Tạo Connection Pool
-# Sửa đoạn này trong web.py của bạn
 try:
     db_pool = mysql.connector.pooling.MySQLConnectionPool(
         pool_name="mypool",
         pool_size=10,
-        # Xóa dòng pool_recycle đi vì nó gây lỗi Unsupported argument
         **db_config
     )
     print("✅ Đã khởi tạo Connection Pool thành công!")
@@ -42,22 +40,25 @@ def login():
     d = request.json
     conn = get_db_connection()
     if not conn: return jsonify({"message": "Lỗi DB"}), 500
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", (d['tk'], d['mk']))
-    u = cursor.fetchone()
-    conn.close()
-    if u:
-        if u.get('status') == 'cho_duyet': return jsonify({"message": "Chờ duyệt"}), 401
-        return jsonify({"success": True, "user": {"tk": u['username'], "quyen": u['role']}})
-    return jsonify({"success": False}), 401
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", (d['tk'], d['mk']))
+        u = cursor.fetchone()
+        if u:
+            if u.get('status') == 'cho_duyet': return jsonify({"message": "Chờ duyệt"}), 401
+            return jsonify({"success": True, "user": {"tk": u['username'], "quyen": u['role']}})
+        return jsonify({"success": False}), 401
+    except Exception as e: return jsonify({"error": str(e)}), 500
+    finally: conn.close()
 
 @app.route('/api/register', methods=['POST'])
 def register():
     d = request.json
     conn = get_db_connection()
+    if not conn: return jsonify({"success": False}), 500
     try:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, password, status) VALUES (%s, %s, 'cho_duyet')", (d['tk'], d['mk']))
+        cursor.execute("INSERT INTO users (username, password, status, role) VALUES (%s, %s, 'cho_duyet', 'nhan_vien')", (d['tk'], d['mk']))
         conn.commit()
         return jsonify({"success": True})
     except: return jsonify({"success": False}), 400
@@ -67,26 +68,32 @@ def register():
 @app.route('/api/admin/users')
 def get_users():
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT username as tk, role as quyen, status as trangThai FROM users WHERE username != 'admin'")
-    res = cursor.fetchall()
-    conn.close()
-    return jsonify(res)
+    if not conn: return jsonify([]), 500
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT username as tk, role as quyen, status as trangThai FROM users WHERE username != 'admin'")
+        res = cursor.fetchall()
+        return jsonify(res)
+    except: return jsonify([]), 500
+    finally: conn.close()
 
 @app.route('/api/admin/approve', methods=['POST'])
 def approve():
     tk = request.json['tk']
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET status = 'da_duyet' WHERE username = %s", (tk,))
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
+    if not conn: return jsonify({"success": False}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET status = 'da_duyet' WHERE username = %s", (tk,))
+        conn.commit()
+        return jsonify({"success": True})
+    finally: conn.close()
 
 @app.route('/api/admin/delete-user', methods=['POST'])
 def delete_user():
     tk = request.json['tk']
     conn = get_db_connection()
+    if not conn: return jsonify({"success": False}), 500
     try:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM users WHERE username = %s", (tk,))
@@ -99,17 +106,99 @@ def delete_user():
 @app.route('/api/khach-hang')
 def get_kh():
     conn = get_db_connection()
-    if not conn: return jsonify({"message": "Lỗi kết nối DB"}), 500
+    if not conn: return jsonify([]), 500
     try:
         cursor = conn.cursor(dictionary=True)
-        # Sửa tên bảng Khach_hang thành chữ thường để an toàn
-        cursor.execute("SELECT id, ho_ten, so_dt, email, DATE_FORMAT(Ngay_rao, '%d/%m/%Y') as Ngay_rao FROM khach_hang ORDER BY id DESC")
+        cursor.execute("SELECT id, ho_ten, so_dt, email, DATE_FORMAT(Ngay_rao, '%d/%m/%Y') as Ngay_rao FROM Khach_hang ORDER BY id DESC")
         res = cursor.fetchall()
         return jsonify(res)
-    except Exception as e: return jsonify({"error": str(e)}), 500
+    finally: conn.close()
+
+@app.route('/api/khach-hang/add', methods=['POST'])
+def add_kh():
+    d = request.json
+    conn = get_db_connection()
+    if not conn: return jsonify({"success": False}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO Khach_hang (ho_ten, so_dt, email) VALUES (%s, %s, %s)", 
+                       (d['hoten'], d['sdt'], d.get('email', '')))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
+    finally: conn.close()
+
+@app.route('/api/khach-hang/delete', methods=['POST'])
+def delete_kh():
+    d = request.json
+    conn = get_db_connection()
+    if not conn: return jsonify({"success": False}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM Khach_hang WHERE id = %s", (d['id'],))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
+    finally: conn.close()
+
+# --- API SẢN PHẨM ---
+@app.route('/api/san-pham')
+def get_sp():
+    conn = get_db_connection()
+    if not conn: return jsonify([]), 500
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM san_pham ORDER BY id DESC")
+        res = cursor.fetchall()
+        return jsonify(res)
+    finally: conn.close()
+
+@app.route('/api/san-pham/add', methods=['POST'])
+def add_sp():
+    d = request.json
+    conn = get_db_connection()
+    if not conn: return jsonify({"success": False}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO san_pham (ten_san_pham, loại_cf, gia_ban, don_vi) VALUES (%s, %s, %s, %s)", 
+                       (d['ten'], d['loai'], d['gia'], d['donvi']))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
+    finally: conn.close()
+
+@app.route('/api/san-pham/delete', methods=['POST'])
+def delete_sp():
+    d = request.json
+    conn = get_db_connection()
+    if not conn: return jsonify({"success": False}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM san_pham WHERE id = %s", (d['id'],))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
     finally: conn.close()
 
 # --- API ĐƠN HÀNG ---
+@app.route('/api/don-hang')
+def get_don_hang():
+    conn = get_db_connection()
+    if not conn: return jsonify([]), 500
+    try:
+        cursor = conn.cursor(dictionary=True)
+        query = """
+            SELECT d.id, k.ho_ten as khach_hang, DATE_FORMAT(d.ngay_mua, '%d/%m/%Y %H:%i') as ngay, 
+                   d.tong_tien, d.trang_thai 
+            FROM don_hang d
+            JOIN Khach_hang k ON d.id_khach_hang = k.id
+            ORDER BY d.id DESC
+        """
+        cursor.execute(query)
+        res = cursor.fetchall()
+        return jsonify(res)
+    finally: conn.close()
+
 @app.route('/api/don-hang/add', methods=['POST'])
 def add_don_hang():
     d = request.json
@@ -117,7 +206,6 @@ def add_don_hang():
     if not conn: return jsonify({"success": False}), 500
     try:
         cursor = conn.cursor()
-        # id_cua_hang mặc định là 1 (phải tạo cửa hàng id=1 trong DB trước)
         cursor.execute("""
             INSERT INTO don_hang (id_khach_hang, id_cua_hang, tong_tien, trang_thai) 
             VALUES (%s, 1, %s, 'hoan_thanh')
@@ -134,9 +222,7 @@ def add_don_hang():
         
         conn.commit()
         return jsonify({"success": True})
-    except Exception as e: 
-        print(f"Lỗi lưu đơn hàng: {e}")
-        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
     finally: conn.close()
 
 # --- PHỤC VỤ FILE ---
