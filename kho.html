@@ -1,340 +1,75 @@
-<!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quản lý Kho - coffee Samba</title>
-    <style>
-      body {
-        font-family: "Helvetica Neue", Arial, sans-serif;
-        margin: 0;
-        background-color: #000;
-        display: flex;
-        background-image: url("hinhnen.jpg");
-        background-size: cover;
-        background-attachment: fixed;
-        background-position: center;
-      }
+<script>
+  // 1. Khởi tạo dữ liệu và quyền
+  document.querySelector("#user-info span span").innerText = user.tk;
 
-      /* Nút Mục lục */
-      .menu-btn {
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-        background: #537667;
-        color: #fff;
-        padding: 12px 24px;
-        border: 2px solid #000;
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        z-index: 1000;
-        transition: 0.3s;
-      }
+  // 2. Kiểm tra quyền Admin
+  if (user.quyen === "admin") {
+    document.getElementById("vung-admin").style.display = "block";
+    document.getElementById("cot-hanh-dong").style.display = "table-cell";
+  }
 
-      /* Khung User Info (Góc phải) */
-      #user-info {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: rgba(255, 255, 255, 0.9);
-        padding: 10px 20px;
-        border-radius: 5px;
-        border: 2px solid #537667;
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        font-weight: bold;
-        color: #000;
-      }
-      #btn-dangxuat {
-        background: red;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        cursor: pointer;
-        font-weight: bold;
-        border-radius: 3px;
-      }
+  function hienThiKho() {
+    fetch('/api/kho')
+    .then(res => res.json())
+    .then(duLieuKho => {
+      let html = "";
+      duLieuKho.forEach((item) => {
+        // Khớp tên cột với SQL: ton_hien_tai, ten_nguyen_lieu, don_vi_tinh
+        let ton = parseFloat(item.ton_hien_tai);
+        let mucBaoDong = 10; // Giả sử mức báo động là 10
+        
+        let statusClass = ton >= mucBaoDong ? "safe" : "warning";
+        let statusText = ton >= mucBaoDong ? "An toàn" : "Cần nhập gấp";
 
-      /* Sidebar */
-      #sidebar {
-        height: 100vh;
-        width: 280px;
-        background: #000;
-        position: fixed;
-        left: -280px;
-        top: 0;
-        transition: 0.4s;
-        padding-top: 80px;
-        z-index: 999;
-      }
-      #sidebar a {
-        padding: 15px 30px;
-        text-decoration: none;
-        color: #fff;
-        display: block;
-        border-bottom: 1px solid #222;
-        text-transform: uppercase;
-        font-family: "Times New Roman";
-      }
-      #sidebar a:hover {
-        background: #fff;
-        color: #000;
-        padding-left: 40px;
-      }
+        html += `<tr>
+                  <td><b>${item.nguyen_lieu_id}</b></td>
+                  <td>${item.ten_nguyen_lieu}</td>
+                  <td><b style="color:${ton < mucBaoDong ? "red" : "black"}">${ton} ${item.don_vi_tinh}</b></td>
+                  <td>${mucBaoDong}</td>
+                  <td><span class="status ${statusClass}">${statusText}</span></td>
+                  ${user.quyen === "admin" ? `<td><button class="btn-delete-row" onclick="xoaDong('${item.nguyen_lieu_id}')">Xóa</button></td>` : ""}
+              </tr>`;
+      });
+      document.getElementById("ds-kho").innerHTML =
+        html || '<tr><td colspan="6" style="text-align:center">Kho trống</td></tr>';
+    });
+  }
 
-      /* Nội dung chính */
-      #main-content {
-        transition: margin-left 0.4s;
-        padding: 80px 50px;
-        width: 100%;
-        box-sizing: border-box;
+  function themHang() {
+    // Lưu ý: Hệ thống mới dùng id_nl (ID nguyên liệu)
+    let id_nl = document.getElementById("ma").value; // Nhập ID nguyên liệu
+    let sl = parseFloat(document.getElementById("ton").value); // Nhập số lượng nhập
+
+    if (!id_nl || isNaN(sl))
+      return alert("Vui lòng nhập ID nguyên liệu và số lượng!");
+
+    fetch('/api/kho/nhap', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ id_nl: id_nl, sl: sl })
+    })
+    .then(res => res.json())
+    .then(result => {
+      if(result.success) {
+        hienThiKho();
+        document.getElementById("ma").value = "";
+        document.getElementById("ton").value = "";
+        alert("Nhập kho thành công!");
+      } else {
+        alert("Lỗi: " + result.error);
       }
-      .content-overlay {
-        background: rgba(255, 255, 255, 0.9);
-        padding: 40px;
-        border-radius: 10px;
-        max-width: 1000px;
-        margin: 20px auto;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-      }
+    });
+  }
 
-      h1 {
-        font-family: "Times New Roman";
-        text-transform: uppercase;
-        border-bottom: 2px solid #537667;
-        display: inline-block;
-        color: #000;
-      }
+  function dangXuat() {
+    localStorage.removeItem("nguoiDungHienTai");
+    window.location.href = "login.html";
+  }
 
-      /* Bảng và nút */
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: #fff;
-        margin-top: 20px;
-        color: #000;
-      }
-      th,
-      td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-      }
-      th {
-        background: #000;
-        color: #fff;
-        text-transform: uppercase;
-        font-size: 12px;
-      }
+  function toggleSidebar() {
+    let sb = document.getElementById("sidebar");
+    sb.style.left = sb.style.left === "0px" ? "-280px" : "0px";
+  }
 
-      .status {
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 11px;
-        font-weight: bold;
-        color: #fff;
-      }
-      .safe {
-        background: #2ecc71;
-      }
-      .warning {
-        background: #e74c3c;
-      }
-
-      /* Khung nhập liệu (Chỉ Admin thấy) */
-      #vung-admin {
-        display: none;
-        margin-bottom: 20px;
-        padding: 20px;
-        border: 1px dashed #537667;
-      }
-      input,
-      select {
-        padding: 8px;
-        margin: 5px;
-        border: 1px solid #ccc;
-      }
-      .btn-add {
-        background: #000;
-        color: #fff;
-        border: none;
-        padding: 10px 20px;
-        cursor: pointer;
-        font-weight: bold;
-      }
-      .btn-delete-row {
-        background: #ff4d4d;
-        color: white;
-        border: none;
-        padding: 5px 8px;
-        cursor: pointer;
-        border-radius: 3px;
-        font-size: 10px;
-      }
-    </style>
-  </head>
-  <body>
-    <script>
-      let user = JSON.parse(localStorage.getItem("nguoiDungHienTai"));
-      if (!user) window.location.href = "login.html";
-    </script>
-
-    <div id="user-info">
-      <span>Xin chào, <span style="color: #c2061cf4">${user.tk}</span>!</span>
-      <button id="btn-dangxuat" onclick="dangXuat()">Đăng xuất</button>
-    </div>
-
-    <button class="menu-btn" onclick="toggleSidebar()">☰ MỤC LỤC</button>
-
-    <div id="sidebar">
-      <a href="index.html">🏠 Trang chủ</a>
-      <a href="kho.html">4. Kho</a>
-    </div>
-
-    <div id="main-content">
-      <div class="content-overlay">
-        <h1>Quản lý tồn kho</h1>
-        <p>Hệ thống ghi nhận dữ liệu kho của <b>coffee Samba</b>.</p>
-
-        <div id="vung-admin">
-          <h3 style="margin-top: 0; color: #537667">CÔNG CỤ QUẢN TRỊ VIÊN</h3>
-          <input type="text" id="ma" placeholder="Mã hàng" />
-          <input
-            type="text"
-            id="ten"
-            placeholder="Tên sản phẩm"
-            style="width: 200px"
-          />
-          <input type="number" id="ton" placeholder="Tồn" style="width: 80px" />
-          <input
-            type="number"
-            id="min"
-            placeholder="Tối thiểu"
-            style="width: 80px"
-          />
-          <button class="btn-add" onclick="themHang()">+ Lưu vào kho</button>
-          <button
-            onclick="xoaSach()"
-            style="
-              background: red;
-              color: white;
-              border: none;
-              padding: 10px;
-              cursor: pointer;
-              font-weight: bold;
-              margin-left: 10px;
-            "
-          >
-            XÓA SẠCH KHO
-          </button>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Mã</th>
-              <th>Sản phẩm</th>
-              <th>Tồn</th>
-              <th>Mức báo động</th>
-              <th>Trạng thái</th>
-              <th id="cot-hanh-dong" style="display: none">Xử lý</th>
-            </tr>
-          </thead>
-          <tbody id="ds-kho"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <script>
-      // 1. Khởi tạo dữ liệu và quyền
-      document.querySelector("#user-info span span").innerText = user.tk;
-
-      // 2. Kiểm tra quyền Admin để mở khóa tính năng
-      if (user.quyen === "admin") {
-        document.getElementById("vung-admin").style.display = "block";
-        document.getElementById("cot-hanh-dong").style.display = "table-cell";
-      }
-
-      function hienThiKho() {
-        fetch('/api/kho')
-        .then(res => res.json())
-        .then(duLieuKho => {
-          let html = "";
-          duLieuKho.forEach((item, index) => {
-            let statusClass = item.ton >= item.min ? "safe" : "warning";
-            let statusText = item.ton >= item.min ? "An toàn" : "Cần nhập gấp";
-
-            html += `<tr>
-                      <td><b>${item.ma}</b></td>
-                      <td>${item.ten}</td>
-                      <td><b style="color:${item.ton < item.min ? "red" : "black"}">${item.ton}</b></td>
-                      <td>${item.min}</td>
-                      <td><span class="status ${statusClass}">${statusText}</span></td>
-                      ${user.quyen === "admin" ? `<td><button class="btn-delete-row" onclick="xoaDong('${item.ma}')">Xóa</button></td>` : ""}
-                  </tr>`;
-          });
-          document.getElementById("ds-kho").innerHTML =
-            html ||
-            '<tr><td colspan="6" style="text-align:center">Kho trống</td></tr>';
-        });
-      }
-
-      function themHang() {
-        let ma = document.getElementById("ma").value;
-        let ten = document.getElementById("ten").value;
-        let ton = parseInt(document.getElementById("ton").value);
-        let min = parseInt(document.getElementById("min").value);
-
-        if (!ma || !ten || isNaN(ton))
-          return alert("Vui lòng nhập đủ thông tin!");
-
-        fetch('/api/kho/add', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ ma, ten, ton, min })
-        })
-        .then(() => {
-          hienThiKho();
-          // Dọn form
-          document.getElementById("ma").value = "";
-          document.getElementById("ten").value = "";
-          document.getElementById("ton").value = "";
-          document.getElementById("min").value = "";
-        });
-      }
-
-      function xoaDong(ma) {
-        if (confirm("Xóa món này?")) {
-          fetch('/api/kho/delete', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ ma })
-          }).then(() => hienThiKho());
-        }
-      }
-
-      function xoaSach() {
-        if (confirm("CẢNH BÁO: Bạn chắc chắn muốn xóa sạch toàn bộ kho?")) {
-          duLieuKho = [];
-          localStorage.setItem("khoSamba", JSON.stringify(duLieuKho));
-          hienThiKho();
-        }
-      }
-
-      function dangXuat() {
-        localStorage.removeItem("nguoiDungHienTai");
-        window.location.href = "login.html";
-      }
-
-      function toggleSidebar() {
-        let sb = document.getElementById("sidebar");
-        sb.style.left = sb.style.left === "0px" ? "-280px" : "0px";
-      }
-
-      hienThiKho();
-    </script>
-  </body>
-</html>
+  hienThiKho();
+</script>
