@@ -22,6 +22,27 @@ try:
         **db_config
     )
     print("✅ Đã khởi tạo Connection Pool thành công!")
+    
+    # Tự động khởi tạo database nếu chưa có bảng
+    def init_db():
+        conn = db_pool.get_connection()
+        cursor = conn.cursor()
+        try:
+            with open('database.sql', 'r', encoding='utf-8') as f:
+                sql_commands = f.read().split(';')
+                for cmd in sql_commands:
+                    if cmd.strip():
+                        cursor.execute(cmd)
+            conn.commit()
+            print("✅ Đã khởi tạo/cập nhật Database thành công!")
+        except Exception as e:
+            print(f"⚠️ Cảnh báo khởi tạo DB: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+    
+    init_db()
+
 except mysql.connector.Error as err:
     print(f"❌ Lỗi khởi tạo DB Pool: {err}")
     db_pool = None
