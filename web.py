@@ -216,6 +216,38 @@ def get_dt():
         return jsonify(res)
     finally: conn.close()
 
+# --- API ADMIN (QUẢN LÝ TÀI KHOẢN) ---
+@app.route('/api/admin/users')
+def admin_get_users():
+    conn = get_db()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT username as tk, role as quyen, status as trangThai FROM users ORDER BY id DESC")
+        return jsonify(cursor.fetchall())
+    finally: conn.close()
+
+@app.route('/api/admin/approve', methods=['POST'])
+def admin_approve():
+    d = request.json
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET status = 'da_duyet' WHERE username = %s", (d['tk'],))
+        conn.commit()
+        return jsonify({"success": True})
+    finally: conn.close()
+
+@app.route('/api/admin/delete-user', methods=['POST'])
+def admin_delete_user():
+    d = request.json
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM users WHERE username = %s AND role != 'admin'", (d['tk'],))
+        conn.commit()
+        return jsonify({"success": True})
+    finally: conn.close()
+
 # --- FILE TĨNH ---
 @app.route('/')
 def h(): return send_from_directory('.', 'index.html')
