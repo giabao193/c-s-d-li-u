@@ -115,10 +115,22 @@ def delete_kh():
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        # 1. Xóa chi tiết đơn hàng của các đơn hàng thuộc khách này
+        cursor.execute("""
+            DELETE FROM chi_tiet_don_hang 
+            WHERE id_don_hang IN (SELECT id FROM don_hang WHERE id_khach_hang = %s)
+        """, (d['id'],))
+        
+        # 2. Xóa các đơn hàng của khách này
+        cursor.execute("DELETE FROM don_hang WHERE id_khach_hang = %s", (d['id'],))
+        
+        # 3. Cuối cùng mới xóa khách hàng
         cursor.execute("DELETE FROM khach_hang WHERE id = %s", (d['id'],))
+        
         conn.commit()
         return jsonify({"success": True})
-    except Exception as e: return jsonify({"success": False, "message": str(e)}), 400
+    except Exception as e: 
+        return jsonify({"success": False, "message": str(e)}), 400
     finally: conn.close()
 
 # --- API SẢN PHẨM (Đã sửa loại_cf -> loai_cf) ---
@@ -257,8 +269,17 @@ def delete_kho_item():
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM nguon_nguyen_lieu WHERE ma_hang = %s", (d['ma'],))
-        conn.commit()
+        # 1. Tìm ID của nguyên liệu dựa trên mã hàng
+        cursor.execute("SELECT id FROM nguon_nguyen_lieu WHERE ma_hang = %s", (d['ma'],))
+        res = cursor.fetchone()
+        if res:
+            # 2. Xóa các giao dịch liên quan trong kho_nguyen_lieu
+            cursor.execute("DELETE FROM kho_nguyen_lieu WHERE id_nguyen_lieu = %s", (res[0],))
+            # 3. Xóa các chi tiết sản xuất liên quan
+            cursor.execute("DELETE FROM chi_tiet_san_xuat WHERE id_nguyen_lieu = %s", (res[0],))
+            # 4. Cuối cùng mới xóa trong nguon_nguyen_lieu
+            cursor.execute("DELETE FROM nguon_nguyen_lieu WHERE id = %s", (res[0],))
+            conn.commit()
         return jsonify({"success": True})
     except Exception as e: 
         return jsonify({"success": False, "error": str(e)}), 400
