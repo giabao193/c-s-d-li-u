@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS Khach_hang (
+CREATE TABLE IF NOT EXISTS khach_hang (
     id int auto_increment primary key,
     ho_ten varchar(100) not null,
     so_dt varchar(20) unique not null,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS cua_hang (
 CREATE TABLE IF NOT EXISTS san_pham (
     id int auto_increment primary key,
     ten_san_pham varchar(100) not null,
-    loại_cf varchar(50),
+    loai_cf varchar(50),
     gia_ban decimal(10, 2),
     trang_thai enum('con_hang', 'het_hang') default 'con_hang',
     don_vi varchar(10) default 'kg'
@@ -67,8 +67,11 @@ CREATE TABLE IF NOT EXISTS chi_tiet_don_hang (
 
 CREATE TABLE IF NOT EXISTS nguon_nguyen_lieu (
     id int auto_increment primary key,
+    ma_hang varchar(50),
     ten_nguyen_lieu varchar(100) not null,
-    don_vi_tinh varchar(10)
+    don_vi_tinh varchar(10),
+    ton_kho decimal(10,2) default 0,
+    muc_bao_dong decimal(10,2) default 0
 );
 
 CREATE TABLE IF NOT EXISTS kho_nguyen_lieu (

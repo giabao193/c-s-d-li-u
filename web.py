@@ -137,33 +137,6 @@ def get_don_hang():
 def h(): return send_from_directory('.', 'index.html')
 @app.route('/<path:p>')
 def s(p): return send_from_directory('.', p)
-# --- API KHO HÀNG ---
-@app.route('/api/kho')
-def get_kho():
-    conn = get_db_connection()
-    if not conn: return jsonify([]), 500
-    try:
-        cursor = conn.cursor(dictionary=True)
-        # Lấy dữ liệu từ View ton_kho chúng ta đã tạo trong SQL
-        cursor.execute("SELECT * FROM ton_kho")
-        return jsonify(cursor.fetchall())
-    finally: conn.close()
-
-@app.route('/api/kho/nhap', methods=['POST'])
-def nhap_kho():
-    d = request.json
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO kho_nguyen_lieu (id_nguyen_lieu, loai_giao_dich, so_luong) 
-            VALUES (%s, 'nhap', %s)
-        """, (d['id_nl'], d['sl']))
-        conn.commit()
-        return jsonify({"success": True})
-    except Exception as e: return jsonify({"success": False, "error": str(e)}), 400
-    finally: conn.close()
-
 # --- API DOANH THU ---
 @app.route('/api/doanh-thu')
 def get_doanh_thu():
@@ -191,7 +164,8 @@ def get_bieu_do():
         """)
         return jsonify(cursor.fetchall())
     finally: conn.close()
-   # --- API KHO HÀNG (Sửa lại để lưu trực tiếp) ---
+
+# --- API KHO HÀNG (Lưu trực tiếp) ---
 @app.route('/api/kho')
 def get_kho():
     conn = get_db_connection()
