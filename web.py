@@ -158,6 +158,22 @@ def add_sp():
     except Exception as e: return jsonify({"success": False, "message": str(e)}), 400
     finally: conn.close()
 
+@app.route('/api/san-pham/delete', methods=['POST'])
+def delete_sp():
+    d = request.json
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # 1. Xóa chi tiết đơn hàng có chứa sản phẩm này
+        cursor.execute("DELETE FROM chi_tiet_don_hang WHERE id_san_pham = %s", (d['id'],))
+        # 2. Xóa sản phẩm chính
+        cursor.execute("DELETE FROM san_pham WHERE id = %s", (d['id'],))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e: 
+        return jsonify({"success": False, "message": str(e)}), 400
+    finally: conn.close()
+
 # --- API ĐƠN HÀNG ---
 @app.route('/api/don-hang')
 def get_don_hang():

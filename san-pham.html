@@ -102,12 +102,21 @@
       }
 
       function xoaSP(id) {
-        if(confirm("Xóa sản phẩm này?")) {
+        if(confirm("Xóa sản phẩm này? (Lưu ý: Các chi tiết đơn hàng liên quan cũng sẽ bị xóa)")) {
           fetch('/api/san-pham/delete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ id })
-          }).then(() => taiSP());
+          })
+          .then(res => res.json())
+          .then(data => {
+            if(data.success) {
+              taiSP();
+            } else {
+              alert("Không thể xóa: " + (data.message || "Lỗi không xác định"));
+            }
+          })
+          .catch(err => alert("Lỗi kết nối: " + err));
         }
       }
       taiSP();
