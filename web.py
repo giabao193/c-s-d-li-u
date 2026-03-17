@@ -15,13 +15,13 @@ db_config = {
 }
 
 # Tạo Connection Pool
+# Sửa đoạn này trong web.py của bạn
 try:
     db_pool = mysql.connector.pooling.MySQLConnectionPool(
-    pool_name="mypool",
-    pool_size=10,
-    pool_recycle=3600, # Thêm dòng này: Tự làm mới kết nối sau 1 tiếng
-    **db_config
-
+        pool_name="mypool",
+        pool_size=10,
+        # Xóa dòng pool_recycle đi vì nó gây lỗi Unsupported argument
+        **db_config
     )
     print("✅ Đã khởi tạo Connection Pool thành công!")
 except mysql.connector.Error as err:
