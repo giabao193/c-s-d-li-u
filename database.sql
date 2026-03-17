@@ -51,8 +51,8 @@ CREATE TABLE IF NOT EXISTS don_hang (
         'huy'
     ) default 'cho_xac_nhan',
     tong_tien decimal(10, 2) not null,
-    foreign key (id_khach_hang) references khach_hang (id),
-    foreign key (id_cua_hang) references cua_hang (id)
+    foreign key (id_khach_hang) references khach_hang (id) ON DELETE CASCADE,
+    foreign key (id_cua_hang) references cua_hang (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS chi_tiet_don_hang (
@@ -61,8 +61,8 @@ CREATE TABLE IF NOT EXISTS chi_tiet_don_hang (
     id_san_pham int not null,
     so_luong int not null,
     gia_ban decimal(10, 2) not null,
-    foreign key (id_don_hang) references don_hang (id),
-    foreign key (id_san_pham) references san_pham (id)
+    foreign key (id_don_hang) references don_hang (id) ON DELETE CASCADE,
+    foreign key (id_san_pham) references san_pham (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS nguon_nguyen_lieu (
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS kho_nguyen_lieu (
     loai_giao_dich enum('nhap', 'xuat') not null,
     so_luong decimal(10, 2) not null,
     ngay_giao_dich datetime default current_timestamp,
-    foreign key (id_nguyen_lieu) references nguon_nguyen_lieu (id)
+    foreign key (id_nguyen_lieu) references nguon_nguyen_lieu (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS san_xuat (
@@ -101,8 +101,8 @@ CREATE TABLE IF NOT EXISTS chi_tiet_san_xuat (
     id_nguyen_lieu int not null,
     so_luong_dung decimal(10, 2) not null,
     don_vi_tinh varchar(10),
-    foreign key (id_san_xuat) references san_xuat (id),
-    foreign key (id_nguyen_lieu) references nguon_nguyen_lieu (id)
+    foreign key (id_san_xuat) references san_xuat (id) ON DELETE CASCADE,
+    foreign key (id_nguyen_lieu) references nguon_nguyen_lieu (id) ON DELETE CASCADE
 );
 
 -- Dữ liệu khởi tạo mặc định

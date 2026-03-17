@@ -98,12 +98,21 @@
       }
 
       function xoaKH(id) {
-        if(confirm("Xóa khách hàng này?")) {
+        if(confirm("Xóa khách hàng này? (Lưu ý: Không thể xóa nếu khách đã có đơn hàng)")) {
           fetch('/api/khach-hang/delete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ id })
-          }).then(() => taiKH());
+          })
+          .then(res => res.json())
+          .then(data => {
+            if(data.success) {
+              taiKH();
+            } else {
+              alert("Không thể xóa: " + (data.message || "Lỗi không xác định"));
+            }
+          })
+          .catch(err => alert("Lỗi kết nối: " + err));
         }
       }
       taiKH();

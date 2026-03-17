@@ -260,6 +260,8 @@ def delete_kho_item():
         cursor.execute("DELETE FROM nguon_nguyen_lieu WHERE ma_hang = %s", (d['ma'],))
         conn.commit()
         return jsonify({"success": True})
+    except Exception as e: 
+        return jsonify({"success": False, "error": str(e)}), 400
     finally: conn.close()
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

@@ -116,7 +116,15 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ ma })
             })
-            .then(() => hienThiKho());
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    hienThiKho();
+                } else {
+                    alert("Không thể xóa: " + (data.error || "Lỗi không xác định"));
+                }
+            })
+            .catch(err => alert("Lỗi kết nối: " + err));
         }
 
         hienThiKho();
