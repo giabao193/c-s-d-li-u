@@ -50,17 +50,27 @@ def get_db():
 @app.route('/api/login', methods=['POST'])
 def login():
     conn = get_db()
-    if not conn: return jsonify({"success": False, "message": "Lỗi DB"}), 500
+    if not conn: return jsonify({"success": False, "message": "Lỗi kết nối DB"}), 500
     try:
         d = request.json
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", (d['tk'], d['mk']))
-        u = cursor.fetchone()
+        
+        u = cursor.fetchone()  # Lấy dòng đầu tiên
+        cursor.fetchall()      # Đọc hết kết quả còn lại để tránh lỗi "Unread result"
+
         if u:
-            if u['status'] == 'cho_duyet': return jsonify({"success": False, "message": "Chờ duyệt"}), 401
-            return jsonify({"success": True, "user": {"tk": u['username'], "quyen": u['role']}})
-        return jsonify({"success": False, "message": "Sai tài khoản/mật khẩu"}), 401
-    finally: conn.close()
+            if u.get('status') == 'cho_duyet': 
+                return jsonify({"success": False, "message": "Tài khoản đang chờ duyệt"}), 401
+            return jsonify({
+                "success": True, 
+                "user": {"tk": u['username'], "quyen": u.get('role', 'admin')}
+            })
+        return jsonify({"success": False, "message": "Sai tài khoản hoặc mật khẩu"}), 401
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/register', methods=['POST'])
 def register():
