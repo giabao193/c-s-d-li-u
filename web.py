@@ -191,6 +191,33 @@ def get_bieu_do():
         """)
         return jsonify(cursor.fetchall())
     finally: conn.close()
+    # --- API KHO HÀNG (Dán thêm vào cuối file, trước dòng if __name__) ---
+@app.route('/api/kho')
+def get_kho_new():
+    conn = get_db_connection()
+    if not conn: return jsonify([]), 500
+    try:
+        cursor = conn.cursor(dictionary=True)
+        # Gọi View ton_kho để lấy số liệu
+        cursor.execute("SELECT * FROM ton_kho")
+        return jsonify(cursor.fetchall())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally: conn.close()
+
+# --- API DOANH THU (Dán thêm) ---
+@app.route('/api/doanh-thu')
+def get_doanh_thu_new():
+    conn = get_db_connection()
+    if not conn: return jsonify({"tong": 0}), 500
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT SUM(tong_tien) as tong FROM don_hang WHERE trang_thai = 'hoan_thanh'")
+        res = cursor.fetchone()
+        return jsonify({"tong": float(res['tong']) if res['tong'] else 0})
+    except:
+        return jsonify({"tong": 0})
+    finally: conn.close()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
