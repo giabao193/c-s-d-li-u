@@ -58,18 +58,28 @@ def get_db_connection():
 # --- API TÀI KHOẢN ---
 @app.route('/api/login', methods=['POST'])
 def login():
-    d = request.json
-    conn = get_db_connection()
-    if not conn: return jsonify({"message": "Lỗi DB"}), 500
     try:
+        d = request.json
+        if not d or 'tk' not in d or 'mk' not in d:
+            return jsonify({"success": False, "message": "Thiếu thông tin đăng nhập"}), 400
+            
+        conn = get_db_connection()
+        if not conn: return jsonify({"success": False, "message": "Lỗi kết nối Database"}), 500
+        
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", (d['tk'], d['mk']))
         u = cursor.fetchone()
+        
         if u:
-            if u.get('status') == 'cho_duyet': return jsonify({"message": "Chờ duyệt"}), 401
+            if u.get('status') == 'cho_duyet': 
+                return jsonify({"success": False, "message": "Tài khoản đang chờ duyệt"}), 401
             return jsonify({"success": True, "user": {"tk": u['username'], "quyen": u['role']}})
-        return jsonify({"success": False}), 401
-    finally: conn.close()
+        
+        return jsonify({"success": False, "message": "Sai tài khoản hoặc mật khẩu"}), 401
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally: 
+        if 'conn' in locals() and conn: conn.close()
 
 @app.route('/api/register', methods=['POST'])
 def register():
