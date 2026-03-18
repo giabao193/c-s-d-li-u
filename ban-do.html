@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bản đồ QGIS - coffee Samba</title>
+    <!-- Leaflet & QGIS Styles from Project 1 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="Project-1-main/Style.css"/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap"/>
+    
+    <style>
+      /* Sidebar styles copied from index.html for consistency */
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        margin: 0; padding: 0; display: flex; background-color: #000;
+      }
+      .menu-btn {
+        font-size: 14px; font-weight: bold; text-transform: uppercase; cursor: pointer;
+        background-color: #537667; color: #ffffff; padding: 12px 24px; border: 2px solid #000000;
+        position: fixed; top: 20px; left: 20px; z-index: 1000; transition: all 0.3s ease;
+      }
+      .menu-btn:hover { background-color: #ffffff; color: #000000; }
+      #user-info {
+        position: fixed; top: 20px; right: 20px; background-color: rgba(255, 255, 255, 0.9);
+        padding: 10px 20px; border-radius: 5px; border: 2px solid #537667; font-weight: bold; color: #000; z-index: 1000;
+        display: flex; align-items: center; gap: 15px;
+      }
+      #btn-dangxuat { background: red; color: white; border: none; padding: 6px 12px; cursor: pointer; font-weight: bold; border-radius: 3px; }
+      #sidebar {
+        height: 100vh; width: 280px; background-color: #000000; position: fixed; left: -280px; top: 0; transition: 0.4s ease; padding-top: 80px; z-index: 999;
+      }
+      #sidebar a {
+        padding: 15px 30px; text-decoration: none; font-size: 14px; color: #ffffff; display: block;
+        transition: all 0.3s ease; border-bottom: 1px solid #222222; font-family: "Times New Roman", serif; text-transform: uppercase;
+      }
+      #sidebar a:hover { background-color: #ffffff; color: #000000; padding-left: 40px; }
+      #main-content { transition: margin-left 0.4s ease; width: 100%; position: relative; }
+      
+      /* Map specific overrides */
+      #map { height: 85vh; margin-top: 20px; }
+      .search1 { top: 80px; left: 50%; transform: translateX(-50%); }
+    </style>
+  </head>
+  <body>
+    <script>
+      let userHienTai = JSON.parse(localStorage.getItem("nguoiDungHienTai"));
+      if (!userHienTai) window.location.href = "login.html";
+    </script>
+
+    <div id="user-info">
+      <span>Xin chào, <span id="ten-hien-thi" style="color: #c2061cf4"></span>!</span>
+      <button id="btn-dangxuat" onclick="dangXuat()">Đăng xuất</button>
+    </div>
+
+    <button class="menu-btn" onclick="toggleSidebar()">☰ MỤC LỤC</button>
+
+    <div id="sidebar">
+      <a href="san-pham.html">1. Quản lý sản phẩm</a>
+      <a href="khach-hang.html">2. Khách hàng</a>
+      <a href="don-hang.html">3. Đơn hàng</a>
+      <a href="kho.html">4. Kho</a>
+      <a href="doanh-thu.html">5. Doanh thu</a>
+      <a href="ban-do.html">6. Bản đồ QGIS</a>
+    </div>
+
+    <div id="main-content">
+        <div class="background">
+            <div class="search1">
+                <span class="material-symbols-outlined">search</span>
+                <input type="text" id="inputschool" placeholder="Tìm trường học...">
+                <button id="search2" title="Tìm kiếm">
+                    <span class="material-symbols-outlined">check</span>
+                </button>
+            </div>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+      // Sidebar logic
+      let isSidebarOpen = false;
+      function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const mainContent = document.getElementById("main-content");
+        if (!isSidebarOpen) {
+          sidebar.style.left = "0";
+          mainContent.style.marginLeft = "280px";
+        } else {
+          sidebar.style.left = "-280px";
+          mainContent.style.marginLeft = "0";
+        }
+        isSidebarOpen = !isSidebarOpen;
+      }
+      function dangXuat() {
+        localStorage.removeItem("nguoiDungHienTai");
+        window.location.href = "login.html";
+      }
+      document.getElementById("ten-hien-thi").innerText = userHienTai.tk;
+
+      // Map Logic (from Project 1 Script.js but with path fixes)
+      var map = L.map('map').setView([10.875, 106.801], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      var layerGroup = L.layerGroup().addTo(map);
+      var schoolData, cafeData;
+
+      // Cập nhật đường dẫn file GeoJSON vì chạy từ root
+      $.getJSON("Project-1-main/Toa_Do.geojson", function(data) { schoolData = data; });
+      $.getJSON("Project-1-main/Cf_500m_Final.geojson", function(data) { cafeData = data; });
+
+      // Fetch additional data from DB
+      function taiDuLieuTuDB() {
+        // Tải Khách hàng
+        fetch('/api/khach-hang')
+        .then(res => res.json())
+        .then(data => {
+          data.forEach(kh => {
+            if (kh.lat_khach_hang && kh.long_khach_hang) {
+              L.marker([kh.lat_khach_hang, kh.long_khach_hang], {
+                icon: L.divIcon({className: 'custom-div-icon', html: "<div style='background-color:blue; width:10px; height:10px; border-radius:50%;'></div>", iconSize: [10, 10]})
+              })
+              .bindPopup(`<b>Khách hàng: ${kh.ho_ten}</b><br>SĐT: ${kh.so_dt}`)
+              .addTo(map);
+            }
+          });
+        });
+
+        // Tải Cửa hàng
+        fetch('/api/cua-hang')
+        .then(res => res.json())
+        .then(data => {
+          data.forEach(ch => {
+            if (ch.lat_cua_hang && ch.long_cua_hang) {
+              L.marker([ch.lat_cua_hang, ch.long_cua_hang], {
+                icon: L.divIcon({className: 'custom-div-icon', html: "<div style='background-color:orange; width:15px; height:15px; border-radius:3px; border: 2px solid black;'></div>", iconSize: [15, 15]})
+              })
+              .bindPopup(`<b>Cửa hàng: ${ch.ten_cua_hang}</b><br>${ch.dia_chi}`)
+              .addTo(map);
+            }
+          });
+        });
+      }
+      taiDuLieuTuDB();
+
+      document.getElementById('search2').addEventListener('click', function() {
+          var input = document.getElementById('inputschool').value.trim().toLowerCase();
+          if (!input || !schoolData) return;
+          layerGroup.clearLayers();
+
+          var school = schoolData.features.find(f => 
+              (f.properties.Name || "").toLowerCase().includes(input)
+          );
+
+          if (school) {
+              var lng = school.geometry.coordinates[0];
+              var lat = school.geometry.coordinates[1];
+              var schoolCoords = [lat, lng];
+              map.setView(schoolCoords, 15);
+
+              L.circle(schoolCoords, {
+                  radius: 500, color: 'Green', fillOpacity: 0.36
+              }).addTo(layerGroup);
+
+              L.marker(schoolCoords)
+                  .bindPopup("<b>" + school.properties.Name + "</b>")
+                  .addTo(layerGroup)
+                  .openPopup();
+
+              cafeData.features.forEach(function(cafe) {
+                  var cLat = cafe.geometry.coordinates[1];
+                  var cLng = cafe.geometry.coordinates[0];
+                  var distance = map.distance(schoolCoords, [cLat, cLng]);
+                  if (distance <= 500) {
+                      L.circleMarker([cLat, cLng], {
+                          radius: 6, fillColor: "Red", color: "#60f03c", weight: 1, fillOpacity: 1
+                      }).bindPopup("<b>" + cafe.properties.name + "</b>").addTo(layerGroup);
+                  }
+              });
+          } else {
+              alert("Không tìm thấy trường học!");
+          }
+      });
+    </script>
+  </body>
+</html>

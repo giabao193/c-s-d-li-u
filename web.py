@@ -10,7 +10,7 @@ db_config = {
     "host": os.environ.get("MYSQLHOST", "localhost"),
     "user": os.environ.get("MYSQLUSER", "root"),
     "password": os.environ.get("MYSQLPASSWORD", ""),
-    "database": os.environ.get("MYSQLDATABASE", "database_cf"),
+    "database": os.environ.get("MYSQLDATABASE", "railway"), # Railway mặc định tên db là railway
     "port": int(os.environ.get("MYSQLPORT", 3306))
 }
 
@@ -24,27 +24,47 @@ try:
     )
     
     def init_db():
+        conn = None
         try:
             conn = db_pool.get_connection()
             cursor = conn.cursor()
             if os.path.exists('database.sql'):
+                print("Đang khởi tạo database...")
                 with open('database.sql', 'r', encoding='utf-8') as f:
-                    for cmd in f.read().split(';'):
+                    content = f.read()
+                    # Chia nhỏ các câu lệnh, loại bỏ CREATE DATABASE và USE để tránh lỗi trên Railway
+                    commands = content.split(';')
+                    for cmd in commands:
                         c = cmd.strip()
-                        if c and not c.upper().startswith(('CREATE DATABASE', 'USE')):
-                            try: cursor.execute(c)
-                            except: pass
+                        if c:
+                            upper_c = c.upper()
+                            if upper_c.startswith(('CREATE DATABASE', 'USE')):
+                                continue
+                            try:
+                                cursor.execute(c)
+                            except Exception as e:
+                                # Bỏ qua lỗi nếu bảng đã tồn tại hoặc lỗi nhỏ khác
+                                pass
                 conn.commit()
+                print("Khởi tạo database thành công!")
             cursor.close()
-            conn.close()
-        except Exception as e: print(f"DB Init: {e}")
+        except Exception as e: 
+            print(f"DB Init Error: {e}")
+        finally:
+            if conn: conn.close()
             
     init_db()
-except Exception as e: print(f"Pool: {e}")
+except Exception as e: 
+    print(f"Pool Error: {e}")
 
 def get_db():
-    try: return db_pool.get_connection() if db_pool else None
-    except: return None
+    try: 
+        if db_pool:
+            return db_pool.get_connection()
+        return None
+    except Exception as e:
+        print(f"Get DB Connection Error: {e}")
+        return None
 
 # --- API ---
 @app.route('/api/login', methods=['POST'])
@@ -89,7 +109,16 @@ def get_kh():
     conn = get_db()
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, ho_ten, so_dt, email, DATE_FORMAT(Ngay_rao, '%d/%m/%Y') as Ngay_rao FROM khach_hang ORDER BY id DESC")
+        cursor.execute("SELECT id, ho_ten, so_dt, email, lat_khach_hang, long_khach_hang, DATE_FORMAT(Ngay_rao, '%d/%m/%Y') as Ngay_rao FROM khach_hang ORDER BY id DESC")
+        return jsonify(cursor.fetchall())
+    finally: conn.close()
+
+@app.route('/api/cua-hang')
+def get_ch():
+    conn = get_db()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, ten_cua_hang, dia_chi, lat_cua_hang, long_cua_hang FROM cua_hang")
         return jsonify(cursor.fetchall())
     finally: conn.close()
 
