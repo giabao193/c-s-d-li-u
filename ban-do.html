@@ -1,83 +1,176 @@
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-
-<style>
-    /* Làm đẹp bảng hướng dẫn đường đi */
-    .leaflet-routing-container {
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Bản đồ QGIS - coffee Samba</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <style>
+      body { font-family: Arial; margin: 0; background-color: #000; display: flex; background-image: url("hinhnen.jpg"); background-size: cover; background-attachment: fixed; }
+      .menu-btn { font-size: 14px; background: #537667; color: #fff; padding: 12px 24px; position: fixed; top: 20px; left: 20px; z-index: 1000; cursor: pointer; }
+      #user-info { position: fixed; top: 20px; right: 20px; background: rgba(255,255,255,0.9); padding: 10px 20px; border-radius: 5px; z-index: 1000; font-weight: bold; }
+      #main-content { padding: 80px 50px; width: 100%; height: 100vh; box-sizing: border-box; }
+      .content-overlay { background: rgba(255,255,255,0.9); padding: 20px; border-radius: 10px; height: 100%; display: flex; flex-direction: column; }
+      
+      #map { flex-grow: 1; border-radius: 8px; margin-top: 20px; }
+      
+      .search-container { display: flex; gap: 10px; margin-bottom: 10px; }
+      input { padding: 8px; flex-grow: 1; border: 1px solid #ccc; border-radius: 4px; }
+      button.btn-search { background: #537667; color: white; padding: 8px 15px; border: none; cursor: pointer; border-radius: 4px; }
+      
+      .leaflet-routing-container {
         background-color: white;
         padding: 10px;
         border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        max-height: 300px;
+        max-height: 250px;
         overflow-y: auto;
         font-size: 12px;
-    }
-</style>
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      let user = JSON.parse(localStorage.getItem("nguoiDungHienTai"));
+      if (!user) window.location.href = "login.html";
+    </script>
+    <div id="user-info">Xin chào, <span style="color: #c2061cf4" id="username"></span>!</div>
+    <button class="menu-btn" onclick="window.location.href='index.html'">🏠 Trang chủ</button>
 
-<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-
-<script>
-    // ... (Giữ nguyên phần khởi tạo Map và Sidebar ở trên) ...
-
-    var control; // Biến điều khiển lộ trình
-
-    // Hàm tìm đường từ Cửa hàng Samba đến một điểm bất kỳ
-    function timDuongDen(lat, lng, tenDiemDen) {
-        // Xóa đường đi cũ nếu có
-        if (control) {
-            map.removeControl(control);
-        }
-
-        // Giả sử lấy tọa độ cửa hàng đầu tiên làm điểm xuất phát (Hoặc tọa độ cố định của Samba)
-        var toaDoSamba = [10.875, 106.801]; 
-
-        control = L.Routing.control({
-            waypoints: [
-                L.latLng(toaDoSamba[0], toaDoSamba[1]), // Điểm đi: Quán Samba
-                L.latLng(lat, lng)                      // Điểm đến: Nơi bạn vừa tìm/click
-            ],
-            lineOptions: {
-                styles: [{color: '#537667', opacity: 0.7, weight: 5}] // Màu xanh thương hiệu Samba
-            },
-            router: L.Routing.osrmv1({
-                serviceUrl: `https://router.project-osrm.org/route/v1`
-            }),
-            show: true // Hiện bảng chỉ đường chi tiết
-        }).addTo(map);
-
-        // Hiển thị Pop-up tại điểm đến
-        L.popup()
-            .setLatLng([lat, lng])
-            .setContent(`<b>Đang tìm đường đến:</b><br>${tenDiemDen}`)
-            .openOn(map);
-    }
-
-    // 3. Cập nhật Logic Tìm kiếm Trường học để Tự động Tìm đường
-    document.getElementById('search2').addEventListener('click', function() {
-        var input = document.getElementById('inputschool').value.trim().toLowerCase();
-        if (!input || !schoolData) return;
+    <div id="main-content">
+      <div class="content-overlay">
+        <h1 style="margin: 0 0 10px 0;">Bản đồ Hệ thống Samba Coffee</h1>
         
-        layerGroup.clearLayers();
+        <div class="search-container">
+            <input type="text" id="inputSearch" placeholder="Tìm kiếm quán cafe hoặc trường học..." />
+            <button class="btn-search" onclick="searchLocation()">Tìm kiếm</button>
+        </div>
 
-        var school = schoolData.features.find(f => 
-            (f.properties.Name || "").toLowerCase().includes(input)
-        );
+        <div id="map"></div>
+      </div>
+    </div>
 
-        if (school) {
-            var lat = school.geometry.coordinates[1];
-            var lng = school.geometry.coordinates[0];
-            
-            // Gọi hàm tìm đường
-            timDuongDen(lat, lng, school.properties.Name);
-            
-            // Vẽ vòng tròn bán kính phục vụ
-            L.circle([lat, lng], { radius: 500, color: 'green', fillOpacity: 0.1 }).addTo(layerGroup);
-        } else {
-            alert("Không tìm thấy trường học!");
-        }
-    });
+    <!-- Leaflet & JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    // 4. Cho phép Click trực tiếp lên bản đồ để tìm đường (Tính năng thêm cho Shipper)
-    map.on('click', function(e) {
-        timDuongDen(e.latlng.lat, e.latlng.lng, "Vị trí đã chọn trên bản đồ");
-    });
-</script>
+    <script>
+      document.getElementById("username").innerText = user.tk;
+
+      // 1. Khởi tạo bản đồ
+      var map = L.map('map').setView([10.776, 106.700], 13); // Mặc định ở Q1
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      var layerGroup = L.layerGroup().addTo(map);
+      var routingControl;
+
+      // 2. Dữ liệu các quán Samba Cafe (Tự chấm theo yêu cầu)
+      var dsQuanSamba = [
+          { name: "Samba Cafe Quận 1", lat: 10.7763, lng: 106.6992, address: "Số 1 Công xã Paris, Bến Nghé, Quận 1" },
+          { name: "Samba Cafe Quận 3", lat: 10.7841, lng: 106.6852, address: "Hồ Con Rùa, Phường 6, Quận 3" },
+          { name: "Samba Cafe Thủ Đức", lat: 10.8491, lng: 106.7720, address: "Số 1 Võ Văn Ngân, Linh Chiểu, Thủ Đức" },
+          { name: "Samba Cafe Làng Đại Học", lat: 10.875, lng: 106.801, address: "Đông Hòa, Dĩ An, Bình Dương (Gần Thủ Đức)" }
+      ];
+
+      // Icon cho quán cafe
+      var cafeIcon = L.icon({
+          iconUrl: 'https://cdn-icons-png.flaticon.com/512/3127/3127435.png',
+          iconSize: [35, 35],
+          iconAnchor: [17, 35],
+          popupAnchor: [0, -35]
+      });
+
+      // Hiển thị các quán Samba lên bản đồ
+      dsQuanSamba.forEach(function(quan) {
+          L.marker([quan.lat, quan.lng], {icon: cafeIcon})
+              .bindPopup(`<b>${quan.name}</b><br>${quan.address}<br><button onclick="timDuongTuDay(${quan.lat}, ${quan.lng})">Giao hàng từ đây</button>`)
+              .addTo(map);
+      });
+
+      // 3. Tải thêm dữ liệu từ Database & GeoJSON nếu có
+      var schoolData, cafeData;
+      $.getJSON("Project-1-main/Toa_Do.geojson", function(data) { schoolData = data; });
+      $.getJSON("Project-1-main/Cf_500m_Final.geojson", function(data) { cafeData = data; });
+
+      // 4. Hàm tìm kiếm
+      function searchLocation() {
+          var input = document.getElementById('inputSearch').value.trim().toLowerCase();
+          if (!input) return;
+
+          layerGroup.clearLayers();
+          var found = false;
+
+          // Tìm trong danh sách Samba trước
+          var samba = dsQuanSamba.find(s => s.name.toLowerCase().includes(input) || s.address.toLowerCase().includes(input));
+          if (samba) {
+              map.setView([samba.lat, samba.lng], 16);
+              L.popup().setLatLng([samba.lat, samba.lng]).setContent(`<b>${samba.name}</b><br>${samba.address}`).openOn(map);
+              found = true;
+          }
+
+          // Tìm trong schoolData
+          if (!found && schoolData) {
+              var school = schoolData.features.find(f => (f.properties.Name || "").toLowerCase().includes(input));
+              if (school) {
+                  var coords = [school.geometry.coordinates[1], school.geometry.coordinates[0]];
+                  map.setView(coords, 16);
+                  L.marker(coords).bindPopup(`<b>Trường học: ${school.properties.Name}</b>`).addTo(layerGroup).openPopup();
+                  found = true;
+              }
+          }
+
+          if (!found) alert("Không tìm thấy địa điểm!");
+      }
+
+      // 5. Hàm tìm đường (Routing)
+      function timDuongDen(destLat, destLng, tenDiemDen) {
+          if (routingControl) map.removeControl(routingControl);
+
+          // Tìm quán Samba gần nhất
+          var ganNhat = dsQuanSamba[0];
+          var distMin = map.distance([destLat, destLng], [dsQuanSamba[0].lat, dsQuanSamba[0].lng]);
+
+          dsQuanSamba.forEach(q => {
+              var d = map.distance([destLat, destLng], [q.lat, q.lng]);
+              if (d < distMin) {
+                  distMin = d;
+                  ganNhat = q;
+              }
+          });
+
+          routingControl = L.Routing.control({
+              waypoints: [
+                  L.latLng(ganNhat.lat, ganNhat.lng),
+                  L.latLng(destLat, destLng)
+              ],
+              lineOptions: {
+                  styles: [{color: '#537667', opacity: 0.8, weight: 6}]
+              },
+              router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
+              show: true
+          }).addTo(map);
+
+          L.popup()
+              .setLatLng([destLat, destLng])
+              .setContent(`<b>Điểm giao hàng:</b><br>${tenDiemDen}<br><i>Giao từ: ${ganNhat.name}</i>`)
+              .openOn(map);
+      }
+
+      // Khi click vào map, tìm đường từ quán gần nhất đến đó
+      map.on('click', function(e) {
+          timDuongDen(e.latlng.lat, e.latlng.lng, "Vị trí đã chọn");
+      });
+
+      function timDuongTuDay(lat, lng) {
+          alert("Hãy click vào một điểm trên bản đồ để chọn nơi giao hàng!");
+      }
+
+    </script>
+  </body>
+</html>
